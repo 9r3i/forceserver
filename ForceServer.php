@@ -10,7 +10,7 @@
  *   ForceData
  */
 class ForceServer{
-  const version='1.0.0';
+  const version='1.1.1';
   private $dir=null;
   private $dirPlugins=null;
   private $postMethods=[
@@ -24,11 +24,15 @@ class ForceServer{
     /* prepare header */
     $this->header();
     /* prepare directory */
-    $this->dir=str_replace('\/','/',__DIR__.'/force/data/');
+    $forceRoot=defined('FORCE_CLI_DIR')
+      ?str_replace('\/','/',FORCE_CLI_DIR)
+      :str_replace('\/','/',__DIR__);
+    $forceRoot.=substr($forceRoot,-1)!='/'?'/':"";
+    $this->dir=$forceRoot.'/force/data/';
     if(!is_dir($this->dir)){
       @mkdir($this->dir,0755,true);
     }
-    $this->dirPlugins=str_replace('\/','/',__DIR__.'/force/plugins/');
+    $this->dirPlugins=$forceRoot.'/force/plugins/';
     if(!is_dir($this->dirPlugins)){
       @mkdir($this->dirPlugins,0755,true);
     }

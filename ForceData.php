@@ -8,14 +8,18 @@
  * started at november 13th 2022
  */
 class ForceData{
-  const version='1.0.0';
+  const version='1.1.0';
   private $dir=null;
   private $diri=null;
   /* construct */
   public function __construct(string $dir){
     /* prepare directory */
+    $forceRoot=defined('FORCE_CLI_DIR')
+      ?str_replace('\/','/',FORCE_CLI_DIR)
+      :str_replace('\/','/',__DIR__);
+    $forceRoot.=substr($forceRoot,-1)!='/'?'/':"";
     $dir=preg_replace('/[^0-9a-z_]+/i','',$dir);
-    $root=str_replace('\/','/',__DIR__.'/force/data/');
+    $root=$forceRoot.'/force/data/';
     $this->dir=str_replace('\/','/',$root.$dir.'/data/');
     if(!is_dir($this->dir)){
       @mkdir($this->dir,0755,true);
