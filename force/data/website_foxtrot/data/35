@@ -1,0 +1,31 @@
+<strong>Percobaan plugin locode</strong>
+kode javascript
+@[locode:js[
+var content=document.getElementById('content');
+content.innerText='Percobaan saja';
+setTimeout(e=>{
+  return e;
+},250);
+~]]
+sip berhasil
+
+<strong>Percobaan plugin arabic</strong>
+percobaan tulisan arab di tengah tulisan lainnya
+begitulah cara  رَبِّ  memberikan rahmat-Nya
+percobaan tulisan arab satu baris dan otomatis geser kanan
+الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ
+ya, alhamdulillaah berhasil juga
+
+<strong>Percobaan plugin link detector</strong>
+kita coba yang lain, yaitu link
+https://github.com/9r3i
+dan kita coba di tengah-tengah tanda kutip "https://github.com/9r3i" seperti ini
+ok berhasil lagi
+
+<strong>Percobaan Tema/Tampilan</strong>
+Klik <a onclick="ForceWebsite.tryAnotherTheme()">disini</a> untuk mengganti tema dengan tema SabunJelly.
+Dan klik lagi untuk mengembalikannya.
+
+
+<strong>Percobaan lainnya</strong>
+
