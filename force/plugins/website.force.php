@@ -9,7 +9,6 @@
  */
 class website{
   protected $db=null;
-  protected $error=false;
   protected $pkey=null;
   public $postMethods=[
     'test',
@@ -123,7 +122,6 @@ class website{
   }
   /* new data */
   public function dataNew($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['title'],$post['content'])){
       return 'Error: Invalid request.';
@@ -141,6 +139,7 @@ class website{
       'title'=>$post['title'],
       'time'=>date('Y-m-d H:i:s'),
       'slug'=>$slug,
+      'type'=>isset($post['type'])?$post['type']:'text',
     ];
     $wc=$this->db->write((string)$id,$post['content']);
     $wd=$this->db->data('data',$data);
@@ -148,7 +147,6 @@ class website{
   }
   /* edit data */
   public function dataEdit($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['title'],$post['content'],$post['id'])
       ||!isset($post['slug'],$post['time'])){
@@ -175,6 +173,7 @@ class website{
           'title'=>$post['title'],
           'time'=>$post['time'],
           'slug'=>$post['slug'],
+          'type'=>isset($post['type'])?$post['type']:'text',
         ];
         $found=true;
       }
@@ -188,7 +187,6 @@ class website{
   }
   /* delete data */
   public function dataDelete($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['id'])){
       return 'Error: Invalid request.';
@@ -213,7 +211,6 @@ class website{
   }
   /* upload picture */
   public function pictureUpload($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['id'],$post['data'])){
       return 'Error: Invalid request.';
@@ -231,7 +228,6 @@ class website{
   }
   /* delete picture */
   public function pictureDelete($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['id'])){
       return 'Error: Invalid request.';
@@ -249,7 +245,6 @@ class website{
   }
   /* edit foot */
   public function footEdit($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['foot'])){
       return 'Error: Invalid request.';
@@ -259,7 +254,6 @@ class website{
   }
   /* edit user */
   public function userEdit($post){
-    $invalid=$this->pkeyInvalid($post);
     if($invalid){return $invalid;}
     if(!isset($post['uname'],$post['upass'],$post['opass'])){
       return 'Error: Invalid request.';
@@ -297,10 +291,5 @@ class website{
       'request'=>$req,
       'pre'=>$pre,
     ];
-  }
-  /* =============== helper =============== */
-  /* pkey invalid */
-  private function pkeyInvalid($post){
-    return $this->error;
   }
 }
