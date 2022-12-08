@@ -1,5 +1,5 @@
 <?php
-/* like.sweb.php
+/* like.force.php
  * ~ a ForceServer plugin for like storage
  * started at november 14th 2022
  * @requires ForceData
@@ -13,9 +13,8 @@ class like{
   ];
   protected $db=null;
   protected $dir=null;
-  function __construct(){
-    $base=$_GET['database']??'data';
-    $base=$_POST['database']??$base;
+  function __construct($req,$method,$pre){
+    $base=$req['database']??'data';
     $this->db=new ForceData('website_'.$base);
     $this->dir=$this->db->dir();
   }

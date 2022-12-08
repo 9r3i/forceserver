@@ -6,11 +6,10 @@
  * authored by 9r3i
  * https://github.com/9r3i
  * started at november 13th 2022
- * @requires
- *   ForceData
+ * continued at december 8th 2022 -- 1.2.0
  */
 class ForceServer{
-  const version='1.1.1';
+  const version='1.2.0';
   private $dir=null;
   private $dirPlugins=null;
   private $postMethods=[
@@ -78,7 +77,7 @@ class ForceServer{
   }
   /* client service */
   private function client($get){
-    $file=dirname($this->dir).'/js/force.min.obf.js';
+    $file=dirname($this->dir).'/js/force.min.js';
     $get=is_file($file)?@file_get_contents($file):false;
     $out=$get?$get
       :'alert("Error: Client service is not available.")';
@@ -94,11 +93,20 @@ class ForceServer{
     $ptrn='/^([0-9a-z_]+)\.([0-9a-z_]+)$/i';
     $pre=(object)[
       'dir'=>$this->dir,
+      'className'=>null,
+      'method'=>null,
+      'output'=>function(string $out=''){
+        header('Content-Length: '.strlen($out));
+        header('HTTP/1.1 200 OK');
+        exit($out);
+      },
     ];
     if(isset($_GET['method'])
       &&preg_match($ptrn,$_GET['method'],$ak)){
       $cname=$ak[1];
       $method=$ak[2];
+      $pre->className=$cname;
+      $pre->method=$method;
       unset($_GET['method']);
       $file=$this->dirPlugins.$cname.'.force.php';
       if(!is_file($file)){return false;}
@@ -121,6 +129,8 @@ class ForceServer{
       &&preg_match($ptrn,$_POST['method'],$ak)){
       $cname=$ak[1];
       $method=$ak[2];
+      $pre->className=$cname;
+      $pre->method=$method;
       unset($_POST['method']);
       unset($_POST['token']);
       $file=$this->dirPlugins.$cname.'.force.php';
@@ -151,7 +161,8 @@ class ForceServer{
   /* basic response output */
   private function output(string $out=''){
     header('Content-Length: '.strlen($out));
-    header('HTTP/1.1 200 OK');
+    header('HTTP/1.1 '
+      .(preg_match('/^error/i',$out)?'400 Bad Request':'200 OK'));
     exit($out);
   }
   /* user log -- requires @this->dir */

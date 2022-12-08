@@ -28,22 +28,49 @@ class website{
     'all',
     'foot',
     'content',
+    'image',
   ];
   /* constructor */
   function __construct($req,$method,$pre){
-    $dname=isset($req['database'])?$req['database']:'data';
-    $this->db=new ForceData('website_'.$dname);
-    if($method=='POST'){
+    $base=$req['database']??'data';
+    $this->db=new ForceData('website_'.$base);
+    if($method=='POST'&&$pre->method!='login'){
       if(!isset($_POST['pkey'])){
-        $this->error='Error: Require privilege key.';
+        return $pre->output('Error: Require privilege key.');
       }elseif(!$this->db->isValidPkey($_POST['pkey'])){
-        $this->error='Error: Invalid privilege key.';
+        return $pre->output('Error: Invalid privilege key.');
       }
       $this->pkey=$_POST['pkey'];
       unset($_POST['pkey']);
     }
   }
   /* =============== get methods =============== */
+  /* public image */
+  public function image($get){
+    if(!isset($get['id'])){
+      $text='Error: Require image ID.';
+      header('HTTP/1.1 400 Bad Request');
+      header('Content-Length: '.strlen($text));
+      exit($text);
+    }
+    $file=$this->db->diri().$get['id'].'.jpg';
+    if(!is_file($file)){
+      $text='Error: Image is not found.';
+      header('HTTP/1.1 404 Not Found');
+      header('Content-Length: '.strlen($text));
+      exit($text);
+    }
+    header('Content-Description: File Transfer');
+    header('Content-Type: image/jpeg');
+    header('Content-Disposition: attachment; filename="'.basename($file).'"');
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+    header('Content-Length: '.filesize($file));
+    header('HTTP/1.1 200 OK');
+    readfile($file);
+    exit;
+  }
   /* select public data */
   public function select($get){
     $key=isset($get['key'])?$get['key']:'id';

@@ -1,5 +1,5 @@
 <?php
-/* land.sweb.php
+/* land.force.php
  * ~ a ForceServer plugin for landing server
  * started at november 9th 2022
  * @requires ForceData
@@ -14,9 +14,8 @@ class land{
     'iniPut',
   ];
   protected $dir=null;
-  function __construct(){
-    $base=$_GET['database']??'data';
-    $base=$_POST['database']??$base;
+  function __construct($req,$method,$pre){
+    $base=$req['database']??'data';
     $db=new ForceData('website_'.$base);
     $this->dir=$db->dir();
   }
