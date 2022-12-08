@@ -1,6 +1,6 @@
 <?php
 /* config.force.php
- * ~ a ForceServer plugin for crispies plugin and config theme
+ * ~ a ForceServer plugin for setting web configuration
  * started at december 4th 2022
  * @requires ForceData
  */
