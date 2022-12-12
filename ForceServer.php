@@ -9,7 +9,7 @@
  * continued at december 8th 2022 -- 1.2.0
  */
 class ForceServer{
-  const version='1.2.0';
+  const version='1.2.1';
   private $dir=null;
   private $dirPlugins=null;
   private $postMethods=[
@@ -66,8 +66,8 @@ class ForceServer{
     /* initialize plugins */
     $this->pluginsInit();
     /* final error handler */
-    header('HTTP/1.1 401 Unauthorized');
-    $text='Error: 401 Unauthorized';
+    header('HTTP/1.1 401 Unauthorized'.print_r($_POST,true));
+    $text='Error: 401 Unauthorized.'.print_r($_POST,true);
     header('Content-Length: '.strlen($text));
     exit($text);
   }
@@ -161,8 +161,7 @@ class ForceServer{
   /* basic response output */
   private function output(string $out=''){
     header('Content-Length: '.strlen($out));
-    header('HTTP/1.1 '
-      .(preg_match('/^error/i',$out)?'400 Bad Request':'200 OK'));
+    header('HTTP/1.1 200 OK');
     exit($out);
   }
   /* user log -- requires @this->dir */

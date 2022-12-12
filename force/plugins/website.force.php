@@ -18,14 +18,13 @@ class website{
     'dataDelete',
     'pictureUpload',
     'pictureDelete',
-    'footEdit',
     'userEdit',
+    'upload',
   ];
   public $getMethods=[
     'test',
     'select',
     'all',
-    'foot',
     'content',
     'image',
   ];
@@ -52,25 +51,60 @@ class website{
       header('Content-Length: '.strlen($text));
       exit($text);
     }
-    $file=$this->db->diri().$get['id'].'.jpg';
+    $file=$this->db->diri().$get['id'];
     if(!is_file($file)){
       $text='Error: Image is not found.';
       header('HTTP/1.1 404 Not Found');
       header('Content-Length: '.strlen($text));
       exit($text);
     }
-    header('Content-Description: File Transfer');
-    header('Content-Type: image/jpeg');
-    header('Content-Disposition: attachment; filename="'.basename($file).'"');
-    header('Expires: 0');
-    header('Cache-Control: must-revalidate');
-    header('Pragma: public');
+    $info=getimagesize($file);
+    $mime=isset($info['mime'])?$info['mime']:'image/jpeg';
+    header('Content-Type: '.$mime);
     header('Content-Length: '.filesize($file));
     header('HTTP/1.1 200 OK');
-    readfile($file);
+    @readfile($file);
     exit;
   }
-  /* select public data */
+  /* data content only */
+  public function content($get){
+    if(!isset($get['id'])){
+      return 'Error: Require ID.';
+    }
+    $data=$this->db->findById($get['id']);
+    if(!is_array($data)||count($data)<1){
+      $text='Error: Not Found.';
+      header('Content-Length: '.strlen($text));
+      header('HTTP/1.1 404 Not Found');
+      exit($text);
+    }
+    $row=array_values($data)[0];
+    $type=$row['type'];
+    $file=$this->db->dir().$get['id'];
+    $mime='text/plain';
+    if($type=='image'){
+      $info=@getimagesize($file);
+      $mime=isset($info['mime'])?$info['mime']:'image/jpeg';
+    }elseif($type=='audio'){
+      $mime='audio/mpeg';
+    }elseif($type=='video'){
+      $mime='video/mp4';
+    }elseif($type=='gzip'){
+      $mime='application/gzip';
+    }elseif($type=='binary'){
+      $mime='application/octet-stream';
+    }elseif($type=='json'){
+      $mime='application/json';
+    }elseif($type=='url'){
+      $mime='application/x-www-form-urlencoded';
+    }
+    header('Content-Type: '.$mime);
+    header('Content-Length: '.filesize($file));
+    header('HTTP/1.1 200 OK');
+    @readfile($file);
+    exit;
+  }
+  /* select public data -- with content */
   public function select($get){
     $key=isset($get['key'])?$get['key']:'id';
     if(!isset($get[$key])){
@@ -83,19 +117,9 @@ class website{
     },$data);
     return array_values($map);
   }
-  /* data content */
-  public function content($get){
-    if(!isset($get['id'])){
-      return 'Error: Require ID.';
-    }return $this->db->read($get['id']);
-  }
-  /* all data */
+  /* all data -- without content */
   public function all($get){
     return $this->db->data();
-  }
-  /* foot content */
-  public function foot($get){
-    return $this->db->read('foot');
   }
   /* =============== post methods =============== */
   /* login */
@@ -122,7 +146,6 @@ class website{
   }
   /* new data */
   public function dataNew($post){
-    if($invalid){return $invalid;}
     if(!isset($post['title'],$post['content'])){
       return 'Error: Invalid request.';
     }
@@ -143,11 +166,10 @@ class website{
     ];
     $wc=$this->db->write((string)$id,$post['content']);
     $wd=$this->db->data('data',$data);
-    return $wd?'OK':'Error: Failed to save data.';
+    return $wd?'Saved.':'Error: Failed to save data.';
   }
   /* edit data */
   public function dataEdit($post){
-    if($invalid){return $invalid;}
     if(!isset($post['title'],$post['content'],$post['id'])
       ||!isset($post['slug'],$post['time'])){
       return 'Error: Invalid request.';
@@ -183,11 +205,10 @@ class website{
     }
     $wc=$this->db->write($post['id'],$post['content']);
     $wd=$this->db->data('data',array_values($data));
-    return $wd?'OK':'Error: Failed to save data.';
+    return $wd?'Saved.':'Error: Failed to save data.';
   }
   /* delete data */
   public function dataDelete($post){
-    if($invalid){return $invalid;}
     if(!isset($post['id'])){
       return 'Error: Invalid request.';
     }
@@ -207,11 +228,10 @@ class website{
     if(is_file($file)){@unlink($file);}
     if(is_file($image)){@unlink($image);}
     $wd=$this->db->data('data',array_values($data));
-    return $wd?'OK':'Error: Failed to save data.';
+    return $wd?'Saved.':'Error: Failed to save data.';
   }
   /* upload picture */
   public function pictureUpload($post){
-    if($invalid){return $invalid;}
     if(!isset($post['id'],$post['data'])){
       return 'Error: Invalid request.';
     }
@@ -220,15 +240,14 @@ class website{
       return 'Error: Data is not found.';
     }
     $ptrn='/^data:image\/([0-9a-z]+);base64,/';
-    $file=$this->db->diri().$post['id'].'.jpg';
+    $file=$this->db->diri().$post['id'];
     $base=preg_replace($ptrn,'',$post['data']);
     $data=base64_decode($base);
     $wd=@file_put_contents($file,$data);
-    return $wd?'OK':'Error: Failed to save picture.';
+    return $wd?'Uploaded.':'Error: Failed to upload picture.';
   }
   /* delete picture */
   public function pictureDelete($post){
-    if($invalid){return $invalid;}
     if(!isset($post['id'])){
       return 'Error: Invalid request.';
     }
@@ -236,25 +255,15 @@ class website{
     if(count($find)<1){
       return 'Error: Data is not found.';
     }
-    $file=$this->db->diri().$post['id'].'.jpg';
+    $file=$this->db->diri().$post['id'];
     if(!is_file($file)){
       return 'Error: File is not found.';
     }
     $wd=@unlink($file);
-    return $wd?'OK':'Error: Failed to delete picture.';
-  }
-  /* edit foot */
-  public function footEdit($post){
-    if($invalid){return $invalid;}
-    if(!isset($post['foot'])){
-      return 'Error: Invalid request.';
-    }
-    $wd=$this->db->write('foot',$post['foot']);
-    return $wd?'OK':'Error: Failed to save foot content.';
+    return $wd?'Deleted.':'Error: Failed to delete picture.';
   }
   /* edit user */
   public function userEdit($post){
-    if($invalid){return $invalid;}
     if(!isset($post['uname'],$post['upass'],$post['opass'])){
       return 'Error: Invalid request.';
     }
@@ -281,7 +290,33 @@ class website{
     }
     $data[$key]['upass']=password_hash($post['upass'],1);
     $wd=$this->db->data('user',array_values($data));
-    return $wd?'OK':'Error: Failed to save data.';
+    return $wd?'Saved.':'Error: Failed to save data.';
+  }
+  /* upload */
+  public function upload($post,$method,$pre){
+    if(!isset($post['id'],$_FILES['data'])){
+      return 'Error: Invalid request.';
+    }
+    $target=$this->db->dir().$post['id'];
+    $file=$_FILES['data'];
+    $error=$file['error'];
+    $errors=[
+      'UPLOAD_ERR_OK',
+      'UPLOAD_ERR_INI_SIZE',
+      'UPLOAD_ERR_FORM_SIZE',
+      'UPLOAD_ERR_PARTIAL',
+      'UPLOAD_ERR_NO_FILE',
+      'UPLOAD_ERR_UNKNOWN_5',
+      'UPLOAD_ERR_NO_TMP_DIR',
+      'UPLOAD_ERR_CANT_WRITE',
+      'UPLOAD_ERR_EXTENSION',
+    ];
+    if($error){
+      $message=$errors[$error];
+      return "Error: {$error} - {$message}.";
+    }
+    $move=@move_uploaded_file($file['tmp_name'],$target);
+    return $move?'Uploaded.':'Error: Failed to upload file.';
   }
   /* =============== testing methods =============== */
   /* test */
