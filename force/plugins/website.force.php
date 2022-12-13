@@ -10,6 +10,7 @@
 class website{
   protected $db=null;
   protected $pkey=null;
+  protected $temp=null;
   public $postMethods=[
     'test',
     'login',
@@ -28,10 +29,26 @@ class website{
     'content',
     'image',
   ];
+  public $types=[
+    'text',
+    'image',
+    'audio',
+    'video',
+    'json',
+    'url',
+    'ini',
+    'base64',
+    'gzip',
+    'binary',
+  ];
   /* constructor */
   function __construct($req,$method,$pre){
     $base=$req['database']??'data';
     $this->db=new ForceData('website_'.$base);
+    $this->temp=$this->db->dir().'temp/';
+    if(!is_dir($this->temp)){
+      @mkdir($this->temp,0755,true);
+    }
     if($method=='POST'&&$pre->method!='login'){
       if(!isset($_POST['pkey'])){
         return $pre->output('Error: Require privilege key.');
@@ -62,10 +79,11 @@ class website{
     $mime=isset($info['mime'])?$info['mime']:'image/jpeg';
     header('Content-Type: '.$mime);
     header('Content-Length: '.filesize($file));
+    header('Cache-Control: public, max-age=604800');
     header('HTTP/1.1 200 OK');
     @readfile($file);
     exit;
-  }
+  } 
   /* data content only */
   public function content($get){
     if(!isset($get['id'])){
@@ -112,7 +130,12 @@ class website{
     }
     $data=$this->db->findData($key,$get[$key]);
     $map=array_map(function($v){
-      $v['content']=$this->db->read($v['id']);
+      $readable=['text','json','url','ini','base64'];
+      if(in_array($v['type'],$readable)){
+        $v['content']=$this->db->read($v['id']);
+      }else{
+        $v['content']="@[content:{$v['id']}[*** {$v['type']} ***]]";
+      }
       return $v;
     },$data);
     return array_values($map);
@@ -146,13 +169,19 @@ class website{
   }
   /* new data */
   public function dataNew($post){
-    if(!isset($post['title'],$post['content'])){
+    if(!isset($post['title'],$post['content'],$post['type'])){
       return 'Error: Invalid request.';
+    }
+    if(trim($post['title'])==''){
+      return 'Error: Empty title field.';
     }
     $slug=$this->db->toSlug($post['title']);
     $find=$this->db->findData('slug',$slug);
     if(count($find)>0){
       return 'Error: Slug has been taken.';
+    }
+    if(!in_array($post['type'],$this->types)){
+      return 'Error: Invalid content type.';
     }
     $data=$this->db->data();
     $length=count($data);
@@ -162,16 +191,25 @@ class website{
       'title'=>$post['title'],
       'time'=>date('Y-m-d H:i:s'),
       'slug'=>$slug,
-      'type'=>isset($post['type'])?$post['type']:'text',
+      'type'=>$post['type'],
     ];
-    $wc=$this->db->write((string)$id,$post['content']);
     $wd=$this->db->data('data',$data);
+    $readable=['text','json','url','ini','base64'];
+    $ptrn='/^@\[content:(\d+)\[\*{3}\s([a-z0-9]+)\s\*{3}\]\]$/';
+    if(in_array($post['type'],$readable)){
+      $wc=$this->db->write((string)$id,$post['content']);
+    }elseif(preg_match($ptrn,$post['content'],$akur)
+      &&$akur[2]=='temp'){
+      $wc=$this->moveTempFile($post['content'],(string)$id);
+    }else{
+      /* nothing else to do */
+    }
     return $wd?'Saved.':'Error: Failed to save data.';
   }
   /* edit data */
   public function dataEdit($post){
     if(!isset($post['title'],$post['content'],$post['id'])
-      ||!isset($post['slug'],$post['time'])){
+      ||!isset($post['slug'],$post['time'],$post['type'])){
       return 'Error: Invalid request.';
     }
     $tptrn='/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/';
@@ -186,26 +224,46 @@ class website{
     if(count($find)>0&&$find[0]['id']!=$post['id']){
       return 'Error: Slug has been taken.';
     }
+    if(!in_array($post['type'],$this->types)){
+      return 'Error: Invalid content type.';
+    }
     $data=$this->db->data();
+    $old=null;
+    $key=null;
     $found=false;
     foreach($data as $k=>$v){
       if($v['id']==$post['id']){
+        $old=$v;
+        $key=$k;
         $data[$k]=[
           'id'=>intval($post['id']),
           'title'=>$post['title'],
           'time'=>$post['time'],
           'slug'=>$post['slug'],
-          'type'=>isset($post['type'])?$post['type']:'text',
+          'type'=>$post['type'],
         ];
         $found=true;
+        break;
       }
     }
     if(!$found){
       return 'Error: Data is not found.';
     }
-    $wc=$this->db->write($post['id'],$post['content']);
+    $ptrn='/^@\[content:(\d+)\[\*{3}\s([a-z0-9]+)\s\*{3}\]\]$/';
+    if(preg_match($ptrn,$post['content'],$akur)
+      &&$akur[2]!='temp'){
+      $data[$key]['type']=$old['type'];
+    }
     $wd=$this->db->data('data',array_values($data));
-    return $wd?'Saved.':'Error: Failed to save data.';
+    $readable=['text','json','url','ini','base64'];
+    if(in_array($post['type'],$readable)){
+      $wc=$this->db->write($post['id'],$post['content']);
+    }elseif(preg_match($ptrn,$post['content'],$akur)
+      &&$akur[2]=='temp'){
+      $wc=$this->moveTempFile($post['content'],$post['id']);
+    }else{
+      /* nothing else to do */
+    }return $wd?'Saved.':'Error: Failed to save data.';
   }
   /* delete data */
   public function dataDelete($post){
@@ -224,7 +282,7 @@ class website{
       return 'Error: Data is not found.';
     }
     $file=$this->db->dir().$post['id'];
-    $image=$this->db->diri().$post['id'].'.jpg';
+    $image=$this->db->diri().$post['id'];
     if(is_file($file)){@unlink($file);}
     if(is_file($image)){@unlink($image);}
     $wd=$this->db->data('data',array_values($data));
@@ -294,10 +352,9 @@ class website{
   }
   /* upload */
   public function upload($post,$method,$pre){
-    if(!isset($post['id'],$_FILES['data'])){
+    if(!isset($_FILES['data'])){
       return 'Error: Invalid request.';
     }
-    $target=$this->db->dir().$post['id'];
     $file=$_FILES['data'];
     $error=$file['error'];
     $errors=[
@@ -315,8 +372,12 @@ class website{
       $message=$errors[$error];
       return "Error: {$error} - {$message}.";
     }
-    $move=@move_uploaded_file($file['tmp_name'],$target);
-    return $move?'Uploaded.':'Error: Failed to upload file.';
+    $tid=$this->getTempID();
+    $target=$this->temp.$tid;
+    $moved=@move_uploaded_file($file['tmp_name'],$target);
+    if(!$moved){
+      return 'Error: Failed to upload file.';
+    }return "@[content:{$tid}[*** temp ***]]";
   }
   /* =============== testing methods =============== */
   /* test */
@@ -326,5 +387,27 @@ class website{
       'request'=>$req,
       'pre'=>$pre,
     ];
+  }
+  /* =============== protected methods =============== */
+  /* move temp file to content */
+  protected function moveTempFile(string $content,$id){
+    $ptrn='/^@\[content:(\d+)\[\*{3}\stemp\s\*{3}\]\]$/';
+    if(!preg_match($ptrn,$content,$akur)){
+      return false;
+    }
+    $tid=$akur[1];
+    $file=$this->temp.$tid;
+    if(!is_file($file)){
+      return false;
+    }
+    $target=$this->db->dir().$id;
+    $moved=@rename($file,$target);
+    return $moved?true:false;
+  }
+  /* get random temp id */
+  protected function getTempID(){
+    $tid=mt_rand(1000,9999);
+    $file=$this->temp.$tid;
+    return is_file($file)?$this->getTempID():$tid;
   }
 }

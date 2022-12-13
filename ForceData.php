@@ -8,7 +8,7 @@
  * started at november 13th 2022
  */
 class ForceData{
-  const version='1.1.0';
+  const version='1.1.1';
   private $dir=null;
   private $diri=null;
   /* construct */
@@ -125,7 +125,8 @@ class ForceData{
   public function read(string $name):string{
     $file=$this->dir.$name;
     $o=fopen($file,'rb');
-    if(!is_resource($o)){return '';}
+    $s=filesize($file);
+    if(!is_resource($o)||$s==0){return '';}
     $r=fread($o,filesize($file));
     fclose($o);
     return $r;
