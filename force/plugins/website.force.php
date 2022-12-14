@@ -77,9 +77,16 @@ class website{
     }
     $info=getimagesize($file);
     $mime=isset($info['mime'])?$info['mime']:'image/jpeg';
+    $fname=$get['id'].'.'
+        .preg_replace('/^[^\/]+\//i','',$mime);
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+    header('Cache-Control: public, max-age=604800');
+    header('Content-Description: File Transfer');
+    header('Content-Disposition: attachment; filename="'.$fname.'"');
     header('Content-Type: '.$mime);
     header('Content-Length: '.filesize($file));
-    header('Cache-Control: public, max-age=604800');
     header('HTTP/1.1 200 OK');
     @readfile($file);
     exit;
@@ -90,7 +97,8 @@ class website{
       return 'Error: Require ID.';
     }
     $data=$this->db->findById($get['id']);
-    if(!is_array($data)||count($data)<1){
+    $file=$this->db->dir().$get['id'];
+    if(!is_array($data)||count($data)<1||!is_file($file)){
       $text='Error: Not Found.';
       header('Content-Length: '.strlen($text));
       header('HTTP/1.1 404 Not Found');
@@ -98,24 +106,41 @@ class website{
     }
     $row=array_values($data)[0];
     $type=$row['type'];
-    $file=$this->db->dir().$get['id'];
     $mime='text/plain';
+    $fname=$row['slug'].'.txt';
     if($type=='image'){
       $info=@getimagesize($file);
       $mime=isset($info['mime'])?$info['mime']:'image/jpeg';
+      $fname=$row['slug'].'.'
+        .preg_replace('/^[^\/]+\//i','',$mime);
     }elseif($type=='audio'){
       $mime='audio/mpeg';
+      $fname=$row['slug'].'.mp3';
     }elseif($type=='video'){
       $mime='video/mp4';
+      $fname=$row['slug'].'.mp4';
     }elseif($type=='gzip'){
       $mime='application/gzip';
+      $fname=$row['slug'].'.gz';
     }elseif($type=='binary'){
       $mime='application/octet-stream';
+      $fname=$row['slug'].'.bin';
     }elseif($type=='json'){
       $mime='application/json';
+      $fname=$row['slug'].'.json';
     }elseif($type=='url'){
       $mime='application/x-www-form-urlencoded';
+      $fname=$row['slug'].'.url';
+    }elseif($type=='ini'){
+      $fname=$row['slug'].'.ini';
+    }elseif($type=='base64'){
+      $fname=$row['slug'].'.b64';
     }
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+    header('Content-Description: File Transfer');
+    header('Content-Disposition: attachment; filename="'.$fname.'"');
     header('Content-Type: '.$mime);
     header('Content-Length: '.filesize($file));
     header('HTTP/1.1 200 OK');
