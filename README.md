@@ -9,3 +9,31 @@
 
 # forceserver
 A server API for Force client
+
+# Usage
+It's really simple
+```php
+new ForceServer;
+```
+Ofcourse, with autoloader has applied on the system. If not, just require the files before the call.
+```php
+require_once('ForceServer.php');
+require_once('ForceData.php');
+new ForceServer;
+```
+
+# Plugins
+Plugin are stored at ```force/plugins``` directory, with extension ```<plugin_name>.force.php```. And method to call is ```<plugin_classname>.<plugin_method>```.
+
+Example for plugin ```website``` in website.force.php with method ```all``` from client ForceWebsite:
+```js
+ForceWebsite.fetch('website.all',result=>{
+  /* do something with result */
+});
+```
+
+
+# Closing
+That's all there is to it. Alhamdulillaah...
+
+
