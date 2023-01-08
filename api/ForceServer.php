@@ -9,7 +9,7 @@
  * continued at december 8th 2022 -- 1.2.0
  */
 class ForceServer{
-  const version='1.2.2';
+  const version='1.2.3';
   private $dir=null;
   private $dirPlugins=null;
   private $postMethods=[
@@ -35,8 +35,22 @@ class ForceServer{
     if(!is_dir($this->dirPlugins)){
       @mkdir($this->dirPlugins,0755,true);
     }
+    if(!is_dir($this->dir)
+      ||!is_dir($this->dirPlugins)){
+      header('HTTP/1.1 500 Internal Server Error');
+      $text='Error: 500 Internal Server Error, '
+        .'cannot create new directory.';
+      header('Content-Length: '.strlen($text));
+      exit($text);
+    }
     /* write user log */
-    $this->userlog();
+    if(!$this->userlog()){
+      header('HTTP/1.1 500 Internal Server Error');
+      $text='Error: 500 Internal Server Error, '
+        .'cannot write a file.';
+      header('Content-Length: '.strlen($text));
+      exit($text);
+    }
     /* check request */
     if(isset($_POST['token'],$_POST['method'])
       &&$this->validToken($_POST['token'])
@@ -169,6 +183,9 @@ class ForceServer{
     $ip=isset($_SERVER['REMOTE_ADDR'])?$_SERVER['REMOTE_ADDR']:'';
     $time=date('ymd-His');
     $o=@fopen($this->dir.'userlog.txt','ab');
+    if(!is_resource($o)){
+      return false;
+    }
     $get=@json_encode($_GET);
     $post=@json_encode($_POST);
     $ua=@json_encode($_SERVER['HTTP_USER_AGENT']);
